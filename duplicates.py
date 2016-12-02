@@ -1,106 +1,31 @@
-from os import walk
-from os import path
-from hashlib import md5
-from collections import Counter
-from re import match
+from os import path, walk
 
 
-def are_files_duplicates(duplicate, file_hashes, print_hashes):
+def are_files_duplicates(file_path1, file_path_2):
 
-    for file_hash in file_hashes.items():
-        if duplicate == file_hash[1]:
-                print(file_hash[0].replace('\\', '/'))
+    getsize = lambda file_path, fname: path.getsize(path.join(file_path, fname))
+    printer = lambda path1, path2, file1, file2: print("Duplicates found (size: {}): \n{}\n{} \n".
+                                                       format(getsize(path1, file1), path.join(path1, file1),
+                                                              path.join(path2, file2)))
 
-
-def get_duplicate_hashes(file_hashes):
-    
-    # Считаем сигнатуры что повторяются и сохраняем их в отдельный словарь
-    
-    count_hashes = Counter(file_hashes.values())
-    only_duplicates = {}
-
-    for item in count_hashes.items():
-        if item[1] > 1:
-            only_duplicates[item[0]] = item[1]
-
-    return only_duplicates
+    for chunk1 in walk(file_path1):
+        for chunk_2 in walk(file_path_2):
+            for fname1 in chunk1[2]:
+                for fname_2 in chunk_2[2]:
+                    if fname1 == fname_2 and getsize(file_path1, fname1) == getsize(file_path_2, fname_2):
+                        print()
+                        printer(file_path1, file_path_2, fname1, fname_2)
 
 
-def hash_files(file_list):
-    
-    # Хэшируем каждый файл из списка по md5
+def main():
+    file_path1 = input('Enter the first folder to scan: ')
+    file_path_2 = input('Enter the second folder to scan: ')
 
-    hash_table = {}
-
-    for file in file_list:
-        file_hash = md5(open(file, 'rb').read()).hexdigest()
-        hash_table[file] = file_hash
-
-    return hash_table
-
-
-def scan_directory(directory):
-    
-    # Создаём список файлов в указанной папке
-
-    file_paths = []
-
-    for root, directories, files in walk(directory):
-        for filename in files:
-            filepath = path.join(root, filename)
-            file_paths.append(filepath)
-
-    return file_paths
-
-
-def are_hashed_needed():
-    while True:
-        print("Выводить хэш-сумму файлов? (y/n): ")
-        response = input()
-
-        if match("[yY]", response):
-            return True
-        elif match("[nN]", response):
-            return False
-        else:
-            print("Введено некорректное значение: {}".format(response))
-
-
-if __name__ == '__main__':
-
-    scan_folder = input('Введите папку для сканирования на дубликаты файлов: ')
-
-    if not path.exists(scan_folder):
-        print('Заданной папки не существует')
+    if not path.exists(file_path1 or file_path_2):
+        print('Folder you entered does not exist')
         exit()
 
-    file_list = scan_directory(scan_folder)
-    file_hashes = hash_files(file_list)
-    duplicate_hashes = get_duplicate_hashes(file_hashes)
-    
-    # Спрашиваем выводить ли хэшы для файлов
-    print_hashes = are_hashed_needed()
+    are_files_duplicates(file_path1, file_path_2)
 
-    # Если переменная останется на нуле, значит дубликатов не найдено
-    duplicate_count = 0
-
-    for duplicate in duplicate_hashes:
-        print('')
-        print('=========================================================')
-        print('Найдены дубликаты: ')
-        print('=========================================================')
-
-        # Выводить ли md5 сигнатуру файлов дубликатов?
-
-        if print_hashes:
-            print('Сигнатура файла hash:', duplicate)
-            print('')
-
-        are_files_duplicates(duplicate, file_hashes, print_hashes)
-        duplicate_count += 1
-
-    if not duplicate_count:
-        print('')
-        print('=========================================================')
-        print('Дубликаты не обнаружены')
-        print('=========================================================')
+if __name__ == '__main__':
+    main()

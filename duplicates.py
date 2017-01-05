@@ -1,31 +1,41 @@
-from os import path, walk
+import os
+from collections import Counter
 
 
-def are_files_duplicates(file_path1, file_path_2):
-
-    getsize = lambda file_path, fname: path.getsize(path.join(file_path, fname))
-    printer = lambda path1, path2, file1, file2: print("Duplicates found (size: {}): \n{}\n{} \n".
-                                                       format(getsize(path1, file1), path.join(path1, file1),
-                                                              path.join(path2, file2)))
-
-    for chunk1 in walk(file_path1):
-        for chunk_2 in walk(file_path_2):
-            for fname1 in chunk1[2]:
-                for fname_2 in chunk_2[2]:
-                    if fname1 == fname_2 and getsize(file_path1, fname1) == getsize(file_path_2, fname_2):
-                        print()
-                        printer(file_path1, file_path_2, fname1, fname_2)
+def list_files(folder):
+    all_files = {}
+    for path, dirs, files in os.walk(folder):
+        for file_name in files:
+            full_path = os.path.join(path, file_name)
+            all_files[full_path] = '{} {} bytes'.format(file_name, os.path.getsize(full_path))
+    return all_files
 
 
-def main():
-    file_path1 = input('Enter the first folder to scan: ')
-    file_path_2 = input('Enter the second folder to scan: ')
+def find_duplicates(files):
+    files_descriptions = files.values()
+    files_descriptions = Counter(files_descriptions)
+    duplicates = list(filter(lambda file_name:
+                             files_descriptions[file_name] > 1,
+                             files_descriptions.keys()))
+    return duplicates
 
-    if not path.exists(file_path1 or file_path_2):
-        print('Folder you entered does not exist')
-        exit()
 
-    are_files_duplicates(file_path1, file_path_2)
+def print_duplicates(files, duplicates):
+    if len(duplicates) == 0:
+        print('duplicate files not found')
+        return
+    for duplicate_file_description in duplicates:
+        print('duplicate of {} found in the following directories:'
+              .format(duplicate_file_description))
+        print()
+        duplicate_dirs = list(filter(lambda full_path: files[full_path] == duplicate_file_description, files.keys()))
+        for duplicate_dir in duplicate_dirs:
+            print(duplicate_dir)
+        print()
+
 
 if __name__ == '__main__':
-    main()
+    folder = input('Input folder to search duplicates: \n')
+    file_list = list_files(folder)
+    duplicate_files = find_duplicates(file_list)
+    print_duplicates(file_list, duplicate_files)
